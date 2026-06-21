@@ -3,5 +3,7 @@ langchain_community==0.2.1
 langchain_core==0.2.3
 langchain_google_genai==1.0.5
 langchain_openai==0.1.8
+langchain_anthropic
+python-dotenv
 transformers == 4.40.2
 torch == 2.3.0
