@@ -1,9 +1,12 @@
-langchain==0.2.1
-langchain_community==0.2.1
-langchain_core==0.2.3
-langchain_google_genai==1.0.5
-langchain_openai==0.1.8
-langchain_anthropic
+langchain
+langchain-core
+langchain-community
+langchain-openai
+langchain-google-genai
+langchain-anthropic
+replicate
 python-dotenv
-transformers == 4.40.2
-torch == 2.3.0
+
+# Only needed for --provider huggingface
+# transformers
+# torch
