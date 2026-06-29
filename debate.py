@@ -78,11 +78,12 @@ def run_debate(
 
     os.makedirs(os.path.dirname(file_output) or ".", exist_ok=True)
 
-    fieldnames = ["utterance", "agent_a_eval", "agent_b_critique", "judge_verdict"]
+    fieldnames = ["utterance", "agent_a_eval", "agent_b_critique", "judge_verdict", "judge_class"]
     with open(file_output, "w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames)
         writer.writeheader()
         for row in results:
+            row["judge_class"] = parse_judge_class(row["judge_verdict"])
             writer.writerow({k: row[k] for k in fieldnames})
 
     print(f"Results saved to {file_output}")
