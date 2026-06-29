@@ -1,3 +1,4 @@
+import re
 import argparse
 import os
 import json
@@ -45,13 +46,22 @@ Then explain your reasoning."""
 
 
 def parse_judge_class(verdict: str) -> str:
-    first_line = verdict.strip().split("\n")[0].strip()
-    mapping = {
-        "PHYSICAL_METAPHOR": "physical_metaphor",
-        "EMOTIONAL_METAPHOR": "emotional_metaphor",
-        "LITERAL": "literal",
-    }
-    return mapping.get(first_line, "unknown")
+    """Return lowercase snake_case label by scanning the first two lines with word-boundary regex."""
+    lines = verdict.strip().split("\n")
+    first_two = "\n".join(lines[:2]).upper()
+    if re.search(r"\bPHYSICAL_METAPHOR\b", first_two):
+        return "physical_metaphor"
+    if re.search(r"\bEMOTIONAL_METAPHOR\b", first_two):
+        return "emotional_metaphor"
+    if re.search(r"\bLITERAL\b", first_two):
+        return "literal"
+    return "unknown"
+
+
+def parse_confidence(verdict: str) -> str:
+    """Extract the first integer 0-10 from the verdict; return as string or '' if absent."""
+    m = re.search(r"\b(10|[0-9])\b", verdict)
+    return m.group(1) if m else ""
 
 
 def run_debate(
@@ -74,18 +84,34 @@ def run_debate(
     )
 
     print(f"Running debate on {len(prompts)} utterances...")
-    results = chain.batch(prompts)
+    results = chain.batch(prompts, return_exceptions=True, config={"max_concurrency": 8})
 
     os.makedirs(os.path.dirname(file_output) or ".", exist_ok=True)
 
-    fieldnames = ["utterance", "agent_a_eval", "agent_b_critique", "judge_verdict", "judge_class"]
+    fieldnames = ["utterance", "agent_a_eval", "agent_b_critique", "judge_verdict", "judge_class", "judge_confidence"]
     with open(file_output, "w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames)
         writer.writeheader()
-        for row in results:
-            row["judge_class"] = parse_judge_class(row["judge_verdict"])
-            writer.writerow({k: row[k] for k in fieldnames})
+        for prompt, result in zip(prompts, results):
+            if isinstance(result, Exception):
+                exc = result
+                err_str = f"ERROR: {type(exc).__name__}: {exc}"
+                writer.writerow({
+                    "utterance":        prompt.get("utterance", ""),
+                    "agent_a_eval":     err_str,
+                    "agent_b_critique": err_str,
+                    "judge_verdict":    err_str,
+                    "judge_class":      "error",
+                    "judge_confidence": "",
+                })
+            else:
+                result["judge_class"]      = parse_judge_class(result["judge_verdict"])
+                result["judge_confidence"] = parse_confidence(result["judge_verdict"])
+                writer.writerow({k: result[k] for k in fieldnames})
 
+    n_unknown = sum(1 for p, r in zip(prompts, results)
+                    if not isinstance(r, Exception) and parse_judge_class(r["judge_verdict"]) == "unknown")
+    print(f"Unknown judge_class: {n_unknown}/{len(results)}")
     print(f"Results saved to {file_output}")
 
 
@@ -140,7 +166,7 @@ Override Agent A or Judge for future experiments:
 
     parser.add_argument("--input",      required=True,  help="Path to input JSONLines file (utterance key)")
     parser.add_argument("--output",     required=True,  help="Path to save the output CSV")
-    parser.add_argument("--temperature", type=float, default=0.1)
+    parser.add_argument("--temperature", type=float, default=0.0)
     parser.add_argument("--max-tokens",  type=int,   default=512)
 
     args = parser.parse_args()
@@ -153,15 +179,24 @@ Override Agent A or Judge for future experiments:
         print(f"Error: input file '{args.input}' not found.")
         return
 
-    prompts = []
+    # Load prompts and track actual file line numbers for validation
+    prompts_with_lineno = []
     with open(args.input, encoding="utf-8") as f:
-        for line in f:
+        for lineno, line in enumerate(f, start=1):
             if line.strip():
-                prompts.append(json.loads(line))
+                prompts_with_lineno.append((lineno, json.loads(line)))
 
-    if not prompts:
+    if not prompts_with_lineno:
         print("Error: no prompts found in input file.")
         return
+
+    # Validate every entry has a non-empty 'utterance' key (before spending any tokens)
+    for lineno, entry in prompts_with_lineno:
+        if not entry.get("utterance", "").strip():
+            print(f"Error: line {lineno}: missing or empty 'utterance' key.")
+            return
+
+    prompts = [entry for _, entry in prompts_with_lineno]
 
     print(f"Agent A : {provider_a} / {model_a}")
     print(f"Agent B : {provider_b} / {model_b}")
