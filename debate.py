@@ -44,6 +44,16 @@ Then rate your confidence from 0 to 10.
 Then explain your reasoning."""
 
 
+def parse_judge_class(verdict: str) -> str:
+    first_line = verdict.strip().split("\n")[0].strip()
+    mapping = {
+        "PHYSICAL_METAPHOR": "physical_metaphor",
+        "EMOTIONAL_METAPHOR": "emotional_metaphor",
+        "LITERAL": "literal",
+    }
+    return mapping.get(first_line, "unknown")
+
+
 def run_debate(
     llm_a, llm_b, llm_judge,
     prompts: List[Dict],
