@@ -130,7 +130,7 @@ MA_scriptie/
 
 - [ ] Re-run evaluations on current frontier models (GPT-4o-2024, Claude 3.5 Sonnet, Gemini 1.5 Pro, Llama-3)
 - [ ] Expand metaphor set: *throbbing*, *drilling*, *jumping*, *shooting*
-- [ ] Multi-Agent Debate framework: Agent A evaluates → Agent B critiques → Judge Agent delivers verdict
+- [x] Multi-Agent Debate framework: Agent A evaluates → Agent B critiques → Judge Agent delivers verdict (`debate.py`)
 - [ ] Mechanistic interpretability analysis: identify internal circuits responsible for the emotional/physical mislabeling error (TransformerLens)
 - [ ] Workshop paper submission (ACL Fig-Lang 2027)
 
