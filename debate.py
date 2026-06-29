@@ -77,18 +77,18 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  # Homogeneous debate — all three roles use the same model
-  python debate.py --provider openai --model gpt-4o \\
+  # Homogeneous debate — all three roles use the same model (use a mini model for test runs)
+  python debate.py --provider openai --model gpt-4.1-mini \\
     --input MA_scriptie/code/data/maieutic.json \\
-    --output results/2026/debate/gpt-4o_homogeneous.csv
+    --output results/2026/debate/gpt-4.1-mini_homogeneous.csv
 
   # Cross-provider debate — different model per role
   python debate.py \\
-    --agent-a-provider openai     --agent-a-model gpt-4o \\
+    --agent-a-provider openai     --agent-a-model gpt-5-mini \\
     --agent-b-provider anthropic  --agent-b-model claude-sonnet-4-6 \\
-    --judge-provider  gemini      --judge-model   gemini-1.5-pro \\
+    --judge-provider  gemini      --judge-model   gemini-2.0-flash \\
     --input MA_scriptie/code/data/maieutic.json \\
-    --output results/2026/debate/gpt4o-vs-claude-judge-gemini.csv
+    --output results/2026/debate/gpt5mini-vs-claude-judge-gemini.csv
 """,
     )
 
