@@ -94,30 +94,49 @@ def main():
         description="Multi-Agent Debate: two LLMs debate a pain metaphor, a judge delivers a verdict.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
-Examples:
-  # Homogeneous debate — all three roles use the same model (use a mini model for test runs)
-  python debate.py --provider openai --model gpt-4.1-mini \\
-    --input MA_scriptie/code/data/maieutic.json \\
-    --output results/2026/debate/gpt-4.1-mini_homogeneous.csv
+Experimental conditions (Paper 2 locked design):
+  Agent A and Judge are fixed to openai/gpt-4.1-mini.
+  Only Agent B varies.
 
-  # Cross-provider debate — different model per role
+  # Homogeneous debate (same-model self-critique)
   python debate.py \\
-    --agent-a-provider openai     --agent-a-model gpt-5-mini \\
-    --agent-b-provider anthropic  --agent-b-model claude-sonnet-4-6 \\
-    --judge-provider  gemini      --judge-model   gemini-2.0-flash \\
+    --agent-b-provider openai --agent-b-model gpt-4.1-mini \\
     --input MA_scriptie/code/data/maieutic.json \\
-    --output results/2026/debate/gpt5mini-vs-claude-judge-gemini.csv
+    --output results/2026/debate/homogeneous.csv
+
+  # Cross-model debate — Anthropic critic
+  python debate.py \\
+    --agent-b-provider anthropic --agent-b-model claude-haiku-4-5 \\
+    --input MA_scriptie/code/data/maieutic.json \\
+    --output results/2026/debate/cross_anthropic.csv
+
+  # Cross-model debate — Google critic
+  python debate.py \\
+    --agent-b-provider gemini --agent-b-model gemini-2.0-flash \\
+    --input MA_scriptie/code/data/maieutic.json \\
+    --output results/2026/debate/cross_google.csv
+
+Override Agent A or Judge for future experiments:
+  python debate.py \\
+    --agent-a-provider anthropic --agent-a-model claude-haiku-4-5 \\
+    --agent-b-provider openai    --agent-b-model gpt-4.1-mini \\
+    --judge-provider  gemini     --judge-model   gemini-2.0-flash \\
+    --input MA_scriptie/code/data/maieutic.json \\
+    --output results/2026/debate/custom.csv
 """,
     )
 
-    # Homogeneous shorthand
-    parser.add_argument("--provider", help="Provider for all three roles (overridden by per-role flags)")
-    parser.add_argument("--model",    help="Model for all three roles (overridden by per-role flags)")
+    # Agent A — locked to openai/gpt-4.1-mini in the experimental design; overridable
+    parser.add_argument("--agent-a-provider", dest="agent_a_provider", default="openai")
+    parser.add_argument("--agent-a-model",    dest="agent_a_model",    default="gpt-4.1-mini")
 
-    # Per-role overrides
-    for role in ("agent-a", "agent-b", "judge"):
-        parser.add_argument(f"--{role}-provider", dest=f"{role.replace('-', '_')}_provider")
-        parser.add_argument(f"--{role}-model",    dest=f"{role.replace('-', '_')}_model")
+    # Agent B — the only role that varies across experimental conditions
+    parser.add_argument("--agent-b-provider", dest="agent_b_provider", required=True)
+    parser.add_argument("--agent-b-model",    dest="agent_b_model",    required=True)
+
+    # Judge — locked to openai/gpt-4.1-mini in the experimental design; overridable
+    parser.add_argument("--judge-provider", dest="judge_provider", default="openai")
+    parser.add_argument("--judge-model",    dest="judge_model",    default="gpt-4.1-mini")
 
     parser.add_argument("--input",      required=True,  help="Path to input JSONLines file (utterance key)")
     parser.add_argument("--output",     required=True,  help="Path to save the output CSV")
@@ -126,20 +145,9 @@ Examples:
 
     args = parser.parse_args()
 
-    def resolve(role_provider_attr, role_model_attr):
-        provider = getattr(args, role_provider_attr) or args.provider
-        model    = getattr(args, role_model_attr)    or args.model
-        if not provider or not model:
-            parser.error(
-                f"Specify either --provider/--model (homogeneous) or "
-                f"--{role_provider_attr.replace('_', '-')} and "
-                f"--{role_model_attr.replace('_', '-')} (per-role)."
-            )
-        return provider, model
-
-    provider_a, model_a = resolve("agent_a_provider", "agent_a_model")
-    provider_b, model_b = resolve("agent_b_provider", "agent_b_model")
-    provider_j, model_j = resolve("judge_provider",   "judge_model")
+    provider_a, model_a = args.agent_a_provider, args.agent_a_model
+    provider_b, model_b = args.agent_b_provider, args.agent_b_model
+    provider_j, model_j = args.judge_provider,   args.judge_model
 
     if not os.path.exists(args.input):
         print(f"Error: input file '{args.input}' not found.")
