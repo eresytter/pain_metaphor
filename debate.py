@@ -24,7 +24,7 @@ Agent A has given the following assessment:
 
 Your task is to critique Agent A's reasoning. Challenge any assumptions, expose weaknesses in the argument, and make the strongest possible case for the opposing position. Be specific."""
 
-PROMPT_JUDGE = """You are a judge in a structured debate about whether a patient's pain description contains a metaphorical expression.
+PROMPT_JUDGE = """You are a judge in a structured debate about how a patient's pain description should be interpreted.
 
 Utterance: "{utterance}"
 
@@ -34,7 +34,14 @@ Agent A's assessment:
 Agent B's critique:
 {agent_b_critique}
 
-Based on the full debate above, deliver your final verdict. State whether this utterance contains a pain metaphor (yes or no), explain your reasoning, and rate your confidence from 0 to 10."""
+Based on the full debate, classify this utterance into exactly one of these three categories:
+- PHYSICAL_METAPHOR: the patient uses figurative language to describe a physical sensation (e.g. "stabbing pain" means pain that feels like stabbing, not literal stabbing)
+- EMOTIONAL_METAPHOR: the patient uses figurative language tied to an emotional state (e.g. "burning with anger")
+- LITERAL: the description is not metaphorical — it refers to an actual physical event or sensation without figurative comparison
+
+Begin your response with exactly one of these labels on its own line: PHYSICAL_METAPHOR, EMOTIONAL_METAPHOR, or LITERAL.
+Then rate your confidence from 0 to 10.
+Then explain your reasoning."""
 
 
 def run_debate(
